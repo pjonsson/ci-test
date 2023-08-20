@@ -26,6 +26,7 @@ jobs:
       with:
         repository: pjonsson/ci-data
         path: ci-data
+        token: ${{ secrets.DATA_PUSH_TOKEN }}
     - name: Get diff
       run: |
         cd ci-data
