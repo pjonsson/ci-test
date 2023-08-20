@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  Contiki-NG:
+    timeout-minutes: 15
+    strategy:
+        fail-fast: false
+        matrix:
+          os: [ ubuntu-latest, macos-latest ]
+          test: [ compile-base, compile-arm-ports ]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout github repo
+      uses: actions/checkout@v3
+      with:
+          fetch-depth: 2
+
+    - name: Checkout data repo
+      uses: actions/checkout@v3
+      with:
+        repository: pjonsson/ci-data
+        path: ci-data
+    - name: Get diff
+      run: |
+        cd ci-data
+        bin/add-data ${{ matrix.test }} ${{ matrix.os }}
+        git add -N .
+        echo "# Test size differences" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`diff" >> $GITHUB_STEP_SUMMARY
+        git diff --word-diff=porcelain --unified=0 >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        MERGE_BRANCH_REF=$(echo ${{ github.ref }} | sed -e 's|refs/heads/||g')
+        if [ $MERGE_BRANCH_REF == main ]; then
+          git config user.name "Contiki-NG CI"
+          git config user.email nobody@contiki-ng.org
+          git commit -a -m "CI: update data"
+          git push
+        fi
